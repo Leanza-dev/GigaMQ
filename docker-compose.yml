@@ -1,0 +1,12 @@
+version: "3.9"
+
+services:
+  gigamq:
+    build: .
+    container_name: gigamq-server
+    ports:
+      - "9000:9000"
+    environment:
+      - GOMAXPROCS=4
+    restart: unless-stopped
+
