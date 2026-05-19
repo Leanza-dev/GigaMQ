@@ -59,12 +59,13 @@ func (s *TCPServer) Start(ctx context.Context) error {
 
 func (s *TCPServer) handleConnection(conn net.Conn) {
 	defer s.wg.Done()
-	defer conn.Close()
 
 	clientID := fmt.Sprintf("%s-%d", conn.RemoteAddr().String(), time.Now().UnixNano())
 	s.logger.Debug("New connection accepted", zap.String("client_id", clientID))
 
 	client := NewClient(clientID, conn)
+	defer client.Close()
+	
 	reader := bufio.NewReader(conn)
 	
 	subscriptions := make([]string, 0)
