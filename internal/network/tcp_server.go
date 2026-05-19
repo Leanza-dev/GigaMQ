@@ -75,22 +75,32 @@ func (s *TCPServer) handleConnection(conn net.Conn) {
 	}()
 
 	for {
+		conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 		cmd, err := protocol.ParseCommand(reader)
 		if err != nil {
-			if err == io.EOF {
+			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+				s.logger.Warn("Client timed out (Slowloris protection)", zap.String("client_id", clientID))
+			} else if err == io.EOF {
 				s.logger.Debug("Client disconnected", zap.String("client_id", clientID))
 			} else {
 				s.logger.Warn("Failed to parse command", zap.String("client_id", clientID), zap.Error(err))
 			}
 			return
 		}
+		conn.SetReadDeadline(time.Time{})
 
 		switch cmd.Type {
 		case protocol.CmdPub:
+			ctxTimeout, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 			select {
 			case s.engine.Inbound <- cmd.Message:
-			default:
-				s.logger.Warn("Engine buffer full, dropping message", zap.String("topic", cmd.Message.Topic))
+				cancel()
+			case <-ctxTimeout.Done():
+				cancel()
+				s.logger.Warn("Engine buffer full, rejecting message (Backpressure)", zap.String("client_id", clientID), zap.String("topic", cmd.Message.Topic))
+				conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+				conn.Write([]byte("ERR_BUFFER_FULL\n"))
+				conn.SetWriteDeadline(time.Time{})
 			}
 		case protocol.CmdSub:
 			s.engine.Subscribe(cmd.Message.Topic, client)

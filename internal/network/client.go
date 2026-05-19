@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/Leanza-dev/GigaMQ/internal/domain"
 )
@@ -25,6 +26,9 @@ func (c *Client) GetID() string {
 }
 
 func (c *Client) Send(msg domain.Message) error {
+	c.conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+	defer c.conn.SetWriteDeadline(time.Time{})
+
 	header := fmt.Sprintf("%s %d\r\n", msg.Topic, len(msg.Payload))
 	
 	writer := bufio.NewWriter(c.conn)
