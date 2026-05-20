@@ -5,29 +5,36 @@ import (
 	"sync"
 
 	"github.com/Leanza-dev/GigaMQ/internal/domain"
+	"github.com/Leanza-dev/GigaMQ/internal/engine"
 	"go.uber.org/zap"
 )
 
 type Engine struct {
-	Inbound chan *domain.Message
-	Workers int
-	topics  map[string]*Topic
-	mu      sync.RWMutex
-	logger  *zap.Logger
-	wg      sync.WaitGroup
+	Inbound    chan *domain.Message
+	Workers    int
+	topics     map[string]*Topic
+	mu         sync.RWMutex
+	logger     *zap.Logger
+	wg         sync.WaitGroup
+	dispatcher *engine.Dispatcher
 }
 
-func NewEngine(workers int, bufferSize int, logger *zap.Logger) *Engine {
+func NewEngine(workers int, bufferSize int, dispatcher *engine.Dispatcher, logger *zap.Logger) *Engine {
 	return &Engine{
-		Inbound: make(chan *domain.Message, bufferSize),
-		Workers: workers,
-		topics:  make(map[string]*Topic),
-		logger:  logger,
+		Inbound:    make(chan *domain.Message, bufferSize),
+		Workers:    workers,
+		topics:     make(map[string]*Topic),
+		logger:     logger,
+		dispatcher: dispatcher,
 	}
 }
 
 func (e *Engine) Start(ctx context.Context) {
 	e.logger.Info("Starting GigaMQ Engine", zap.Int("workers", e.Workers))
+
+	// Start the fan-out dispatcher
+	e.dispatcher.Start(ctx)
+
 	for i := 0; i < e.Workers; i++ {
 		e.wg.Add(1)
 		go e.worker(ctx, i)
@@ -64,7 +71,7 @@ func (e *Engine) getOrCreateTopic(name string) *Topic {
 		return t
 	}
 
-	t = NewTopic(name, e.logger)
+	t = NewTopic(name, e.dispatcher, e.logger)
 	e.topics[name] = t
 	return t
 }
@@ -97,5 +104,6 @@ func (e *Engine) routeMessage(msg *domain.Message) {
 
 func (e *Engine) Stop() {
 	e.wg.Wait()
+	e.dispatcher.Stop()
 	e.logger.Info("GigaMQ Engine fully stopped")
 }

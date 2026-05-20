@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Leanza-dev/GigaMQ/internal/domain"
+	"github.com/Leanza-dev/GigaMQ/internal/engine"
 	"go.uber.org/zap"
 )
 
@@ -66,7 +67,9 @@ func (a *atomicCountSubscriber) Close() error { return nil }
 
 // newTestEngine creates an Engine with a no-op logger suitable for unit tests.
 func newTestEngine(workers, bufSize int) *Engine {
-	return NewEngine(workers, bufSize, zap.NewNop())
+	logger := zap.NewNop()
+	dispatcher := engine.NewDispatcher(workers, bufSize, logger)
+	return NewEngine(workers, bufSize, dispatcher, logger)
 }
 
 // startTestEngine creates, starts, and returns an engine with a cancellable context.

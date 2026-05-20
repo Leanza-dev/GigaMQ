@@ -1,9 +1,11 @@
 package queue
 
 import (
-	"github.com/Leanza-dev/GigaMQ/internal/domain"
-	"go.uber.org/zap"
 	"sync"
+
+	"github.com/Leanza-dev/GigaMQ/internal/domain"
+	"github.com/Leanza-dev/GigaMQ/internal/engine"
+	"go.uber.org/zap"
 )
 
 type Topic struct {
@@ -11,13 +13,15 @@ type Topic struct {
 	subscribers map[string]domain.Subscriber
 	mu          sync.RWMutex
 	logger      *zap.Logger
+	dispatcher  *engine.Dispatcher
 }
 
-func NewTopic(name string, logger *zap.Logger) *Topic {
+func NewTopic(name string, dispatcher *engine.Dispatcher, logger *zap.Logger) *Topic {
 	return &Topic{
 		Name:        name,
 		subscribers: make(map[string]domain.Subscriber),
 		logger:      logger,
+		dispatcher:  dispatcher,
 	}
 }
 
@@ -45,12 +49,6 @@ func (t *Topic) Broadcast(msg *domain.Message) {
 	}
 	t.mu.RUnlock()
 
-	// Asynchronous fan-out (Isolated worker to avoid blocking the main loop)
-	go func(targets []domain.Subscriber, m *domain.Message) {
-		for _, sub := range targets {
-			if err := sub.Send(m); err != nil {
-				t.logger.Error("Failed to send message to subscriber", zap.String("sub_id", sub.GetID()), zap.Error(err))
-			}
-		}
-	}(subs, msg)
+	// Delegate fan-out to the bounded high-performance worker pool
+	t.dispatcher.Submit(msg, subs)
 }

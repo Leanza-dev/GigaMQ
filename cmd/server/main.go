@@ -7,6 +7,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Leanza-dev/GigaMQ/internal/engine"
 	"github.com/Leanza-dev/GigaMQ/internal/network"
 	"github.com/Leanza-dev/GigaMQ/internal/queue"
 	"go.uber.org/zap"
@@ -23,12 +24,15 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// Initialize Fan-Out Dispatcher (100 workers, 10,000 capacity queue)
+	dispatcher := engine.NewDispatcher(100, 10000, logger)
+
 	// Initialize the Core Engine (100 workers, 10,000 capacity buffer)
-	engine := queue.NewEngine(100, 10000, logger)
-	engine.Start(ctx)
+	engineInstance := queue.NewEngine(100, 10000, dispatcher, logger)
+	engineInstance.Start(ctx)
 
 	// Initialize the TCP Server adapter on port 9000
-	tcpServer := network.NewTCPServer(":9000", engine, logger)
+	tcpServer := network.NewTCPServer(":9000", engineInstance, logger)
 
 	// Start the TCP server in a separate goroutine
 	go func() {
@@ -53,7 +57,7 @@ func main() {
 	// Wait for components to finish processing (Graceful Shutdown)
 	time.Sleep(1 * time.Second) // Small buffer to let TCP connections close
 	tcpServer.Wait()
-	engine.Stop()
+	engineInstance.Stop()
 
 	logger.Info("GigaMQ Shutdown successfully. Zero data loss.")
 }
