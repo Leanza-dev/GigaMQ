@@ -1,33 +1,33 @@
 # CLAUDE.md - GigaMQ AI Guide
 
-Este documento estabelece as diretrizes de governança, arquitetura e desenvolvimento para qualquer agente de IA operando no repositório **GigaMQ**. Como Tech Lead deste projeto, exijo conformidade absoluta com as regras abaixo.
+This document establishes the governance, architectural, and developmental guidelines for any AI agent operating within the **GigaMQ** repository. As the Tech Lead of this project, absolute compliance with the rules below is mandatory.
 
 ---
 
-## 🏗️ Diretrizes de Arquitetura (Go Concurrencia)
+## 🏗️ Architectural Guidelines (Go Concurrency)
 
-O **GigaMQ** é um motor de mensageria concorrente em Go desenvolvido para performance extrema, throughput de mensagens ultra-alto e baixíssima latência.
+**GigaMQ** is a concurrent messaging engine in Go designed for extreme performance, ultra-high message throughput, and extremely low latency.
 
-*   **Padrões de Concorrência:** Uso estruturado de `Goroutines`, `Channels` e primitivas de sincronização do pacote `sync`.
-*   **Worker Pools:** Canais de trabalho (`Worker Pools`) para gerenciar e limitar o processamento concorrente de tópicos e filas.
-*   **Gerenciamento de Threads:** Foco em manter estruturas thread-safe sem travar o runtime do scheduler do Go.
-
----
-
-## 🚫 Regras Inquebráveis (Guardrails)
-
-1.  **Proibição de Goroutine Leaks:** Toda goroutine criada deve ter um ciclo de vida estrito e um canal ou contexto (`context.Context`) bem definido para cancelamento e encerramento seguro.
-2.  **Thread-Safety Incondicional:** Acesso concorrente a mapas ou buffers de tópicos de mensagens DEVE ser protegido por `sync.Mutex` ou `sync.RWMutex`. Nunca exponha acesso de leitura/escrita simultâneo desprotegido.
-3.  **Proibição de Deadlocks:** Sempre libere os Mutexes usando `defer mutex.Unlock()` imediatamente após a aquisição se o fluxo for complexo, garantindo a prevenção contra pânico e travamento.
-4.  **No Busy-Waiting:** Loopings vazios aguardando a chegada de mensagens estão proibidos. Use seleções em canais (`select { case <-ch: }`) ou variáveis de condição (`sync.Cond`).
+*   **Concurrency Patterns:** Structured use of `Goroutines`, `Channels`, and synchronization primitives from the `sync` package.
+*   **Worker Pools:** Work channels (`Worker Pools`) to manage and limit concurrent processing of topics and queues.
+*   **Thread Management:** Focus on maintaining thread-safe structures without blocking the Go scheduler runtime.
 
 ---
 
-## 🛠️ Comandos Frequentes
+## 🚫 Unbreakable Rules (Guardrails)
+
+1.  **Strict Prohibition of Goroutine Leaks:** Every spawned goroutine must have a strict lifecycle and a well-defined channel or context (`context.Context`) for safe cancellation and termination.
+2.  **Unconditional Thread-Safety:** Concurrent access to maps or message topic buffers MUST be protected by `sync.Mutex` or `sync.RWMutex`. Never expose unprotected simultaneous read/write access.
+3.  **Deadlock Prevention:** Always release Mutexes using `defer mutex.Unlock()` immediately after acquisition if the flow is complex, ensuring prevention against panics and deadlocks.
+4.  **No Busy-Waiting:** Empty loops waiting for message arrivals are prohibited. Use channel selections (`select { case <-ch: }`) or condition variables (`sync.Cond`).
+
+---
+
+## 🛠️ Frequent Commands
 
 *   **Build:** `go build -v ./...`
-*   **Executar Servidor:** `go run cmd/server/main.go`
-*   **Executar Testes:** `go test -v ./...`
-*   **Executar Teste de Corrida (Race):** `go test -race ./...` (essencial antes de qualquer commit!)
-*   **Formatação:** `go fmt ./...`
-*   **Linting:** `golangci-lint run` (se disponível) ou `go vet ./...`
+*   **Run Server:** `go run cmd/server/main.go`
+*   **Run Tests:** `go test -v ./...`
+*   **Run Race Test:** `go test -race ./...` (essential before any commit!)
+*   **Format:** `go fmt ./...`
+*   **Linting:** `golangci-lint run` (if available) or `go vet ./...`

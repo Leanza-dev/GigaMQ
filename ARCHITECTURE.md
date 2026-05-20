@@ -1,15 +1,15 @@
 # Engineering at Scale: GigaMQ Architecture
 
-Bem-vindo ao *Architecture Decision Record* (ADR) do GigaMQ. Desenhamos este *Message Broker* com um único objetivo: maximizar a vazão (*Throughput*) minimizando as pausas de coleta de lixo (*Garbage Collection*) sob altíssima pressão.
+Welcome to the GigaMQ *Architecture Decision Record* (ADR). We designed this *Message Broker* with a single objective: to maximize *Throughput* while minimizing *Garbage Collection* pauses under extremely high pressure.
 
 ## 1. Zero-Copy Routing
-Em brokers inexperientes, fazer *fan-out* de uma mensagem com um `[]byte` grande para 10.000 clientes copia a struct de memória 10.000 vezes, fritando a RAM e engasgando a CPU com *GC Stop-The-World*.
-- **A Solução:** Toda a pipeline de mensageria (Engine -> Topic -> Client) trafega estritamente ponteiros `*domain.Message`. Independentemente do tamanho do payload, o broker aloca e move apenas 8 bytes. A imutabilidade do dado é garantida como uma premissa arquitetural.
+In inexperienced brokers, fanning out a message with a large `[]byte` payload to 10,000 clients copies the struct in memory 10,000 times, frying RAM and choking the CPU with *GC Stop-The-World* pauses.
+- **The Solution:** The entire messaging pipeline (Engine -> Topic -> Client) strictly routes `*domain.Message` pointers. Regardless of payload size, the broker allocates and moves only 8 bytes. Data immutability is guaranteed as an architectural premise.
 
-## 2. Fan-out Assíncrono e O(1) Engine Unblocking
-O roteador central (`Engine`) não pode ficar preso aguardando a iteração de milhares de subscritores durante um *Broadcast*.
-- **Defesa Ativa (Implementada):** No método `Broadcast`, realizamos um *Snapshot* quase instantâneo do mapa de subscritores e liberamos o `RWMutex`. O *fan-out* em si (disparos de `.Send()`) é despachado para uma *Worker Goroutine* dedicada em background. A Engine volta a processar a próxima mensagem em tempo O(1), erradicando qualquer *Starvation*.
+## 2. Asynchronous Fan-out and O(1) Engine Unblocking
+The central router (`Engine`) cannot get stuck waiting to iterate over thousands of subscribers during a *Broadcast*.
+- **Active Defense (Implemented):** In the `Broadcast` method, we take a near-instantaneous *Snapshot* of the subscribers map and release the `RWMutex`. The *fan-out* itself (the `.Send()` calls) is dispatched to a dedicated background *Worker Goroutine*. The Engine returns to process the next message in O(1) time, eradicating any *Starvation*.
 
-## 3. Resiliência: Proteção contra Head-of-Line Blocking
-Se um consumidor lento estiver com a banda saturada, seu *buffer* interno de rede encherá. Se o broker tentar escrever num *buffer* bloqueado, toda a *Goroutine* trava.
-- **A Solução:** As chamadas de envio (`c.outbound <- msg`) operam em canais não-bloqueantes (`select { case ... default: }`). Consumidores lentos terão suas mensagens ejetadas ativamente em favor da sobrevivência do nó e da baixa latência dos consumidores rápidos. Adicionalmente, mitigamos ataques *Slowloris* com *Deadlines* rígidos no TCP (derrubando *Sockets* ociosos para evitar vazamentos de memória (OOM)).
+## 3. Resilience: Protection against Head-of-Line Blocking
+If a slow consumer's bandwidth is saturated, its internal network buffer will fill up. If the broker tries to write to a blocked buffer, the entire *Goroutine* hangs.
+- **The Solution:** The send calls (`c.outbound <- msg`) operate on non-blocking channels (`select { case ... default: }`). Slow consumers will have their messages actively ejected in favor of node survival and low latency for fast consumers. Additionally, we mitigate *Slowloris* attacks with rigid TCP *Deadlines* (dropping idle *Sockets* to prevent memory leaks (OOM)).
