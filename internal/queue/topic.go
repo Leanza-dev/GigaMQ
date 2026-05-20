@@ -35,14 +35,22 @@ func (t *Topic) RemoveSubscriber(subID string) {
 	t.logger.Debug("Subscriber removed from topic", zap.String("topic", t.Name), zap.String("sub_id", subID))
 }
 
-func (t *Topic) Broadcast(msg domain.Message) {
+func (t *Topic) Broadcast(msg *domain.Message) {
 	t.mu.RLock()
-	defer t.mu.RUnlock()
-	
-	// Fan-out: send message to all subscribers
+	// Snapshot rápido dos subscritores para liberar o RLock imediatamente.
+	// Previne starvation de novos inscritos e libera a Engine.
+	subs := make([]domain.Subscriber, 0, len(t.subscribers))
 	for _, sub := range t.subscribers {
-		if err := sub.Send(msg); err != nil {
-			t.logger.Error("Failed to send message to subscriber", zap.String("sub_id", sub.GetID()), zap.Error(err))
-		}
+		subs = append(subs, sub)
 	}
+	t.mu.RUnlock()
+
+	// Fan-out assíncrono (Worker isolado para não travar o loop principal)
+	go func(targets []domain.Subscriber, m *domain.Message) {
+		for _, sub := range targets {
+			if err := sub.Send(m); err != nil {
+				t.logger.Error("Failed to send message to subscriber", zap.String("sub_id", sub.GetID()), zap.Error(err))
+			}
+		}
+	}(subs, msg)
 }

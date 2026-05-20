@@ -2,6 +2,10 @@
 
 > [🇺🇸 English](./README.md) | 🇧🇷 Português
 
+📚 **Recursos Técnicos de Engenharia:**
+*   [**Especificação da Arquitetura (ARCHITECTURE.md)**](./ARCHITECTURE.md) — Mecanismos de roteamento, lock de concorrência e estratégias de backpressure.
+*   [**Governança & Manual da IA (CLAUDE.md)**](./CLAUDE.md) — Regras corporativas, guardrails de desenvolvimento e governança técnica de IA.
+
 **Um Message Queue de alta performance construído em Go — sem brokers externos, latência sub-milissegundo.**
 
 ![Go](https://img.shields.io/badge/Linguagem-Go-00ADD8.svg)

@@ -12,7 +12,7 @@ import (
 type Client struct {
 	id       string
 	conn     net.Conn
-	outbound chan domain.Message
+	outbound chan *domain.Message
 	done     chan struct{}
 }
 
@@ -20,7 +20,7 @@ func NewClient(id string, conn net.Conn) *Client {
 	c := &Client{
 		id:       id,
 		conn:     conn,
-		outbound: make(chan domain.Message, 256),
+		outbound: make(chan *domain.Message, 256),
 		done:     make(chan struct{}),
 	}
 	go c.writePump()
@@ -61,7 +61,7 @@ func (c *Client) GetID() string {
 	return c.id
 }
 
-func (c *Client) Send(msg domain.Message) error {
+func (c *Client) Send(msg *domain.Message) error {
 	select {
 	case c.outbound <- msg:
 		return nil

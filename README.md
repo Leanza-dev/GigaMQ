@@ -2,6 +2,10 @@
 
 > 🇺🇸 English | [🇧🇷 Português](./README.pt-BR.md)
 
+📚 **Deep Dive Technical Resources:**
+*   [**System Architecture Blueprint (ARCHITECTURE.md)**](./ARCHITECTURE.md) — Pub/sub dispatch engine, locking models, backpressure strategy.
+*   [**Governança & Manual da IA (CLAUDE.md)**](./CLAUDE.md) — Regras corporativas, guardrails de concorrência e governança de IA.
+
 **An advanced architectural case study in high-throughput messaging — building a pub/sub broker from scratch in Go to master real concurrency, backpressure control, and fan-out dispatch without external dependencies.**
 
 ![Go](https://img.shields.io/badge/Language-Go-00ADD8.svg)

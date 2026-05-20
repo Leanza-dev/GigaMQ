@@ -9,6 +9,6 @@ type Message struct {
 // Subscriber defines an interface for any client that can receive messages.
 type Subscriber interface {
 	GetID() string
-	Send(msg Message) error
+	Send(msg *Message) error
 	Close() error
 }

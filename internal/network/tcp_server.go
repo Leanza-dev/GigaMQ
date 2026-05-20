@@ -94,7 +94,7 @@ func (s *TCPServer) handleConnection(conn net.Conn) {
 		case protocol.CmdPub:
 			ctxTimeout, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 			select {
-			case s.engine.Inbound <- cmd.Message:
+			case s.engine.Inbound <- &cmd.Message:
 				cancel()
 			case <-ctxTimeout.Done():
 				cancel()

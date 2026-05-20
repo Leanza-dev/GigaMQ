@@ -9,7 +9,7 @@ import (
 )
 
 type Engine struct {
-	Inbound chan domain.Message
+	Inbound chan *domain.Message
 	Workers int
 	topics  map[string]*Topic
 	mu      sync.RWMutex
@@ -19,7 +19,7 @@ type Engine struct {
 
 func NewEngine(workers int, bufferSize int, logger *zap.Logger) *Engine {
 	return &Engine{
-		Inbound: make(chan domain.Message, bufferSize),
+		Inbound: make(chan *domain.Message, bufferSize),
 		Workers: workers,
 		topics:  make(map[string]*Topic),
 		logger:  logger,
@@ -83,7 +83,7 @@ func (e *Engine) Unsubscribe(topicName string, subID string) {
 	}
 }
 
-func (e *Engine) routeMessage(msg domain.Message) {
+func (e *Engine) routeMessage(msg *domain.Message) {
 	e.mu.RLock()
 	t, exists := e.topics[msg.Topic]
 	e.mu.RUnlock()
