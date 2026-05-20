@@ -17,15 +17,17 @@ type Engine struct {
 	logger     *zap.Logger
 	wg         sync.WaitGroup
 	dispatcher *engine.Dispatcher
+	wal        *engine.WAL
 }
 
-func NewEngine(workers int, bufferSize int, dispatcher *engine.Dispatcher, logger *zap.Logger) *Engine {
+func NewEngine(workers int, bufferSize int, dispatcher *engine.Dispatcher, wal *engine.WAL, logger *zap.Logger) *Engine {
 	return &Engine{
 		Inbound:    make(chan *domain.Message, bufferSize),
 		Workers:    workers,
 		topics:     make(map[string]*Topic),
 		logger:     logger,
 		dispatcher: dispatcher,
+		wal:        wal,
 	}
 }
 
@@ -91,6 +93,16 @@ func (e *Engine) Unsubscribe(topicName string, subID string) {
 }
 
 func (e *Engine) routeMessage(msg *domain.Message) {
+	// 1. Durability: Write-Ahead Log (WAL)
+	if e.wal != nil {
+		if err := e.wal.Append(msg); err != nil {
+			e.logger.Error("Message rejected due to WAL failure", zap.Error(err), zap.String("topic", msg.Topic))
+			// Reject message, do not route. The producer should retry.
+			return
+		}
+	}
+
+	// 2. Route to subscribers
 	e.mu.RLock()
 	t, exists := e.topics[msg.Topic]
 	e.mu.RUnlock()

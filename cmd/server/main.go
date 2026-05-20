@@ -27,8 +27,15 @@ func main() {
 	// Initialize Fan-Out Dispatcher (100 workers, 10,000 capacity queue)
 	dispatcher := engine.NewDispatcher(100, 10000, logger)
 
+	// Initialize the Write-Ahead Log (WAL)
+	wal, err := engine.NewWAL("gigamq_data.wal", logger)
+	if err != nil {
+		logger.Fatal("Failed to initialize WAL", zap.Error(err))
+	}
+	defer wal.Close()
+
 	// Initialize the Core Engine (100 workers, 10,000 capacity buffer)
-	engineInstance := queue.NewEngine(100, 10000, dispatcher, logger)
+	engineInstance := queue.NewEngine(100, 10000, dispatcher, wal, logger)
 	engineInstance.Start(ctx)
 
 	// Initialize the TCP Server adapter on port 9000

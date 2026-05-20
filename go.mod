@@ -1,6 +1,6 @@
 module github.com/Leanza-dev/GigaMQ
 
-go 1.21
+go 1.22.0
 
 require go.uber.org/zap v1.27.0
 

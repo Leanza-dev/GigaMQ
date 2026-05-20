@@ -65,11 +65,10 @@ func (a *atomicCountSubscriber) Send(_ *domain.Message) error {
 }
 func (a *atomicCountSubscriber) Close() error { return nil }
 
-// newTestEngine creates an Engine with a no-op logger suitable for unit tests.
 func newTestEngine(workers, bufSize int) *Engine {
 	logger := zap.NewNop()
 	dispatcher := engine.NewDispatcher(workers, bufSize, logger)
-	return NewEngine(workers, bufSize, dispatcher, logger)
+	return NewEngine(workers, bufSize, dispatcher, nil, logger)
 }
 
 // startTestEngine creates, starts, and returns an engine with a cancellable context.
