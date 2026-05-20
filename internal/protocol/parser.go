@@ -55,7 +55,7 @@ func ParseCommand(reader *bufio.Reader) (Command, error) {
 		if _, err := io.ReadFull(reader, payload); err != nil {
 			return Command{}, err
 		}
-		
+
 		// Consume the trailing \r\n
 		_, _ = reader.ReadBytes('\n')
 

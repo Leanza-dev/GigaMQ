@@ -37,7 +37,7 @@ func (e *Engine) Start(ctx context.Context) {
 func (e *Engine) worker(ctx context.Context, id int) {
 	defer e.wg.Done()
 	e.logger.Debug("Worker started", zap.Int("worker_id", id))
-	
+
 	for {
 		select {
 		case msg := <-e.Inbound:

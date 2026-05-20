@@ -65,9 +65,9 @@ func (s *TCPServer) handleConnection(conn net.Conn) {
 
 	client := NewClient(clientID, conn)
 	defer client.Close()
-	
+
 	reader := bufio.NewReader(conn)
-	
+
 	subscriptions := make([]string, 0)
 	defer func() {
 		for _, topic := range subscriptions {

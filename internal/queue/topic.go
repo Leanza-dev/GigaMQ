@@ -1,9 +1,9 @@
 package queue
 
 import (
-	"sync"
 	"github.com/Leanza-dev/GigaMQ/internal/domain"
 	"go.uber.org/zap"
+	"sync"
 )
 
 type Topic struct {

@@ -37,7 +37,7 @@ func (c *Client) writePump() {
 			}
 			c.conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
 			header := fmt.Sprintf("%s %d\r\n", msg.Topic, len(msg.Payload))
-			
+
 			if _, err := writer.WriteString(header); err != nil {
 				return
 			}
