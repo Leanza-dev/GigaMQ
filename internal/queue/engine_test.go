@@ -28,13 +28,13 @@ func newMockSubscriber(id string) *mockSubscriber {
 
 func (s *mockSubscriber) GetID() string { return s.id }
 
-func (s *mockSubscriber) Send(msg domain.Message) error {
+func (s *mockSubscriber) Send(msg *domain.Message) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.closed {
 		return fmt.Errorf("subscriber %s is closed", s.id)
 	}
-	s.received = append(s.received, msg)
+	s.received = append(s.received, *msg)
 	return nil
 }
 
@@ -58,7 +58,7 @@ type atomicCountSubscriber struct {
 }
 
 func (a *atomicCountSubscriber) GetID() string { return a.id }
-func (a *atomicCountSubscriber) Send(_ domain.Message) error {
+func (a *atomicCountSubscriber) Send(_ *domain.Message) error {
 	a.counter.Add(1)
 	return nil
 }
@@ -101,7 +101,7 @@ func TestPublishDeliveredToSubscriber(t *testing.T) {
 	sub := newMockSubscriber("sub-1")
 	eng.Subscribe("orders", sub)
 
-	eng.Inbound <- domain.Message{Topic: "orders", Payload: []byte("order-001")}
+	eng.Inbound <- &domain.Message{Topic: "orders", Payload: []byte("order-001")}
 
 	assertCount(t, sub, 1, 500*time.Millisecond)
 }
@@ -120,7 +120,7 @@ func TestFanOutToMultipleSubscribers(t *testing.T) {
 	eng.Subscribe("metrics", sub2)
 	eng.Subscribe("metrics", sub3)
 
-	eng.Inbound <- domain.Message{Topic: "metrics", Payload: []byte("cpu=82")}
+	eng.Inbound <- &domain.Message{Topic: "metrics", Payload: []byte("cpu=82")}
 
 	assertCount(t, sub1, 1, 500*time.Millisecond)
 	assertCount(t, sub2, 1, 500*time.Millisecond)
@@ -139,8 +139,8 @@ func TestTopicIsolation(t *testing.T) {
 	eng.Subscribe("orders", subOrders)
 	eng.Subscribe("metrics", subMetrics)
 
-	eng.Inbound <- domain.Message{Topic: "orders", Payload: []byte("buy")}
-	eng.Inbound <- domain.Message{Topic: "orders", Payload: []byte("sell")}
+	eng.Inbound <- &domain.Message{Topic: "orders", Payload: []byte("buy")}
+	eng.Inbound <- &domain.Message{Topic: "orders", Payload: []byte("sell")}
 
 	assertCount(t, subOrders, 2, 500*time.Millisecond)
 
@@ -161,11 +161,11 @@ func TestUnsubscribeStopsDelivery(t *testing.T) {
 	sub := newMockSubscriber("ephemeral")
 	eng.Subscribe("events", sub)
 
-	eng.Inbound <- domain.Message{Topic: "events", Payload: []byte("first")}
+	eng.Inbound <- &domain.Message{Topic: "events", Payload: []byte("first")}
 	assertCount(t, sub, 1, 500*time.Millisecond)
 
 	eng.Unsubscribe("events", "ephemeral")
-	eng.Inbound <- domain.Message{Topic: "events", Payload: []byte("second")}
+	eng.Inbound <- &domain.Message{Topic: "events", Payload: []byte("second")}
 
 	time.Sleep(150 * time.Millisecond)
 	if got := sub.Count(); got != 1 {
@@ -195,7 +195,7 @@ func TestConcurrentPublishNoRace(t *testing.T) {
 		go func(pid int) {
 			defer wg.Done()
 			for j := 0; j < msgsPerPublisher; j++ {
-				eng.Inbound <- domain.Message{
+				eng.Inbound <- &domain.Message{
 					Topic:   "stress",
 					Payload: []byte(fmt.Sprintf("pub-%d-msg-%d", pid, j)),
 				}
