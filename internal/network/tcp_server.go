@@ -76,11 +76,12 @@ func (s *TCPServer) handleConnection(conn net.Conn) {
 	}()
 
 	for {
-		conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+		// Big Tech Heartbeat: 60s idle timeout instead of aggressive 5s
+		conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 		cmd, err := protocol.ParseCommand(reader)
 		if err != nil {
 			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-				s.logger.Warn("Client timed out (Slowloris protection)", zap.String("client_id", clientID))
+				s.logger.Warn("Client timed out (Heartbeat failed)", zap.String("client_id", clientID))
 			} else if err == io.EOF {
 				s.logger.Debug("Client disconnected", zap.String("client_id", clientID))
 			} else {
@@ -107,6 +108,10 @@ func (s *TCPServer) handleConnection(conn net.Conn) {
 			s.engine.Subscribe(cmd.Message.Topic, client)
 			subscriptions = append(subscriptions, cmd.Message.Topic)
 			s.logger.Debug("Client subscribed to topic", zap.String("client_id", clientID), zap.String("topic", cmd.Message.Topic))
+		case protocol.CmdPing:
+			conn.SetWriteDeadline(time.Now().Add(2 * time.Second))
+			conn.Write([]byte("PONG\n"))
+			conn.SetWriteDeadline(time.Time{})
 		}
 	}
 }

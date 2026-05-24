@@ -20,6 +20,7 @@ type CommandType int
 const (
 	CmdPub CommandType = iota
 	CmdSub
+	CmdPing
 )
 
 type Command struct {
@@ -76,6 +77,11 @@ func ParseCommand(reader *bufio.Reader) (Command, error) {
 			Message: domain.Message{
 				Topic: parts[1],
 			},
+		}, nil
+
+	case "PING":
+		return Command{
+			Type: CmdPing,
 		}, nil
 
 	default:
