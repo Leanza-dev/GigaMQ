@@ -19,3 +19,6 @@ vendor/
 # OS
 .DS_Store
 Thumbs.db
+
+CLAUDE.md
+ARCHITECTURE_EN.md
